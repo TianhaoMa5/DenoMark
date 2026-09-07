@@ -1,0 +1,41 @@
+{
+  "schema_version": 1,
+  "method": "DenoMark",
+  "encoder": "DenoMark-Encoder",
+  "generation": {
+    "gen_length": 300,
+    "semantic_unit_size": 25,
+    "candidate_positions_per_step": 1,
+    "num_candidates": 16,
+    "num_channels": 2,
+    "average_rollouts_per_candidate": 3,
+    "rollout_schedule": "linear_decay",
+    "base_temperature": 0.5,
+    "candidate_temperature": 0.6,
+    "rollout_temperature": 0.5,
+    "position_selection": "random",
+    "selector": "max_watermark",
+    "selection_mode": "argmax_score",
+    "per_candidate_positions": true,
+    "deduplicate_candidates": true,
+    "shared_rollout_seeds": true,
+    "direction_seed": 42,
+    "message_seed": 0
+  },
+  "detection": {
+    "scan_min_unit_size": 12,
+    "scan_max_unit_size": 37,
+    "per_size_calibration": "empirical_right_tail",
+    "multiple_testing_correction": "bonferroni",
+    "ranking_score": "negative_log_corrected_p",
+    "calibration_negatives": 30000,
+    "heldout_roc_negatives": 10000,
+    "calibration_and_heldout_are_disjoint": true,
+    "tpr_interpolation": "linear_empirical_roc"
+  },
+  "filtering": {
+    "minimum_tokens_before_attack": 150,
+    "maximum_word_4gram_repetition_ratio": 0.2,
+    "filter_attacked_outputs_again": false
+  }
+}

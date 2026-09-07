@@ -1,0 +1,302 @@
+{
+  "schema_version": 1,
+  "datasets": ["finance_qa", "alpacafarm", "longform_qa"],
+  "data_construction": {
+    "script": "denomark/data/prepare_waterbench.py",
+    "rows_per_dataset": 500,
+    "selection": "first rows in source order unless a seeded random subset is requested",
+    "output_fields": ["prompt", "raw_prompt", "input", "context"],
+    "bundled_rows": 0
+  },
+  "backbones": {
+    "llada8b": {
+      "model": "GSAI-ML/LLaDA-8B-Instruct",
+      "generator_family": "llada"
+    },
+    "llada15": {
+      "model": "GSAI-ML/LLaDA-1.5",
+      "generator_family": "llada"
+    },
+    "llada20mini": {
+      "model": "inclusionAI/LLaDA2.0-mini",
+      "generator_family": "llada2"
+    },
+    "dream": {
+      "model": "Dream-org/Dream-v0-Instruct-7B",
+      "generator_family": "dream"
+    }
+  },
+  "cohorts": {
+    "positive_target_per_method_backbone_dataset": 300,
+    "minimum_generator_tokens_before_attack": 150,
+    "maximum_word_4gram_repetition_ratio": 0.2,
+    "deduplicate_normalized_text": true,
+    "filter_attacked_outputs_again": false
+  },
+  "negative_protocol": {
+    "source": "allenai/c4 realnewslike",
+    "samples_per_backbone": 40000,
+    "token_length_range": [150, 300],
+    "calibration_samples": 30000,
+    "heldout_roc_samples": 10000,
+    "disjoint_by_source_id": true,
+    "heldout_pool_shared_by_all_methods_for_backbone": true
+  },
+  "metrics": {
+    "tpr_fprs": [0.005, 0.01, 0.05],
+    "tpr_method": "linear interpolation on empirical ROC",
+    "auc_method": "rank AUC with half credit for ties"
+  },
+  "methods": {
+    "denomark": {
+      "config": "configs/denomark_paper.json",
+      "generator": "denomark-generate",
+      "detector": "denomark/evaluation/detect.py"
+    },
+    "dlm_kgw": {
+      "generator": "denomark/baselines/dlm_kgw/generate.py",
+      "detector": "denomark/baselines/dlm_kgw/detect.py",
+      "delta": {
+        "llada8b": 4.0,
+        "llada15": 4.0,
+        "llada20mini": 4.25,
+        "dream": 4.0
+      },
+      "gamma": 0.25,
+      "convolution_kernel": [-1],
+      "topk": 50,
+      "n_iter": 1,
+      "seeding_scheme": "sumhash",
+      "score": "z_score"
+    },
+    "dgmark": {
+      "generator": "denomark/baselines/dgmark/generate.py",
+      "detector": "denomark/baselines/dgmark/detect.py",
+      "window_size": 8,
+      "score": "mean squared sliding-window z-score",
+      "llada": {
+        "sampling_strategy": "multinomial",
+        "top_k": 10,
+        "beam_size": 10,
+        "remasking": "low_confidence"
+      },
+      "dream": {
+        "sampling_strategy": "multinomial",
+        "top_k": 32,
+        "beam_size": 32,
+        "block_size": 25,
+        "remasking": "low_confidence",
+        "decoding": "dream_dgmark"
+      }
+    },
+    "patternmark": {
+      "generator": "denomark/baselines/patternmark/generate.py",
+      "detector": "denomark/baselines/patternmark/detect.py",
+      "delta": 4.0,
+      "colors": 2,
+      "pattern_length": 4,
+      "patterns": [[0, 1, 0, 1], [1, 0, 1, 0]],
+      "score": "negative official p_value"
+    },
+    "umr": {
+      "generator": "denomark/baselines/umr/generate.py",
+      "detector": "denomark/baselines/umr/detect.py",
+      "message": "1001",
+      "ratio": 0.5,
+      "key": 42,
+      "temperature": 0.5,
+      "remasking": "low_confidence",
+      "delta": {
+        "llada_finance_qa": 10,
+        "llada_alpacafarm": 13,
+        "llada_longform_qa": 10,
+        "dream_all": 10
+      },
+      "score": "official z_score over first 300 retokenized tokens"
+    }
+  },
+  "semantic_attacks": {
+    "sentence_gpt": {
+      "script": "denomark/attacks/gpt_sentence_level.py",
+      "model": "openai/gpt-4o-mini",
+      "temperature": 0.7,
+      "attacks": ["rewrite", "compress_60_70", "expand"]
+    },
+    "document_gpt": {
+      "script": "denomark/attacks/gpt_document_level.py",
+      "model": "openai/gpt-4o-mini",
+      "temperature": 0.7,
+      "attacks": ["rewrite", "compress_60_70", "expand_130_150"]
+    },
+    "parrot": {
+      "script": "denomark/attacks/parrot.py",
+      "candidate_prefix_sizes": [1, 4, 7, 10],
+      "backbones": ["llada8b", "dream"],
+      "datasets": ["finance_qa", "alpacafarm"]
+    },
+    "dipper": {
+      "script": "denomark/attacks/dipper.py",
+      "lexical_diversities": [20, 40, 60, 80],
+      "order_diversity": 0,
+      "backbones": ["llada8b", "dream"],
+      "datasets": ["finance_qa", "alpacafarm"]
+    },
+    "backtranslation": {
+      "script": "denomark/attacks/backtranslation.py",
+      "model": "openai/gpt-4o-mini",
+      "modes": ["sentence", "document"],
+      "route": "English to Chinese to English",
+      "backbones": ["llada8b", "dream"],
+      "datasets": ["alpacafarm", "longform_qa"]
+    },
+    "nonuniform_local_length": {
+      "mix_script": "denomark/attacks/mixed_length.py",
+      "compression_script": "denomark/attacks/variable_compression.py",
+      "backbones": ["dream"],
+      "datasets": ["finance_qa", "longform_qa"],
+      "variants": [
+        "alternating_compress_expand",
+        "random_compress_expand_runs",
+        "three_contiguous_compression_bands_50_60_60_70_70_80"
+      ]
+    }
+  },
+  "token_attacks": {
+    "script": "python -m denomark.attacks.token_level",
+    "attacks": ["deletion", "context_aware_substitution", "adjacent_swap"],
+    "ratios": [0.1, 0.2, 0.3, 0.4, 0.5],
+    "context_model": "bert-base-uncased",
+    "backbones": ["llada8b", "dream"],
+    "datasets": ["finance_qa", "longform_qa"],
+    "figure_averaging": ["ratio", "backbone", "dataset"]
+  },
+  "quality": {
+    "perplexity_script": "python -m denomark.evaluation.ppl",
+    "perplexity_comparator": "denomark/evaluation/compare_ppl.py",
+    "perplexity_statistic": "mean(log PPL_watermarked) - mean(log PPL_clean)",
+    "judge_script": "denomark/evaluation/judge.py",
+    "judge_model": "openai/gpt-4o-mini",
+    "judge_dimensions": ["style", "consistency", "accuracy", "ethics"]
+  },
+  "semantic_encoder_training": {
+    "trainer": "denomark/encoder/train.py",
+    "checkpoint_name": "DenoMark-Encoder",
+    "release_asset": "DenoMark-Encoder.tar.gz",
+    "base_model": "intfloat/e5-base-v2",
+    "source_preparer": "denomark/encoder/prepare.py",
+    "paraphrase_generator": "denomark/encoder/paraphrase.py",
+    "pair_finalizer": "denomark/encoder/merge.py",
+    "source_rows": 8000,
+    "reported_valid_pairs": 7993,
+    "maximum_source_words": 25,
+    "pegasus_model": "tuner007/pegasus_paraphrase",
+    "pegasus_num_beams": 10,
+    "pegasus_max_length": 60,
+    "maximum_encoder_tokens": 64,
+    "pooling": "attention-mask mean pooling followed by L2 normalization",
+    "objective": "InfoNCE with in-batch negatives",
+    "temperature": 0.05,
+    "batch_size": 128,
+    "learning_rate": 1e-5,
+    "epochs": 3,
+    "optimizer": "AdamW",
+    "warmup_ratio": 0.05,
+    "learning_rate_schedule": "linear decay"
+  },
+  "ablations": {
+    "candidate_temperature": [0.3, 0.5, 0.6, 0.75, 0.9],
+    "num_candidates": [8, 16, 24, 32],
+    "fixed_channels": 2,
+    "tied_channels": {"8": 1, "16": 2, "24": 3, "32": 4},
+    "rollout_count": [1, 2, 3, 5, 8],
+    "semantic_unit_size": [15, 25, 40, 50, 100],
+    "scan_ranges": [[25, 25], [23, 27], [21, 29], [17, 33], [12, 37], [10, 40]],
+    "maximum_generation_length": [100, 150, 200, 250, 300],
+    "candidate_positions_per_step": [1, 2, 4, 8],
+    "position_selection": ["random", "low_confidence"],
+    "encoder": ["contrastive_ft", "intfloat/e5-base-v2"]
+  },
+  "semi_ar_baselines": {
+    "shared": {
+      "temperature": 0.9,
+      "position_selection": "random",
+      "semantic_unit_size": 25
+    },
+    "block_best_of_k": {
+      "generator": "denomark/baselines/block_best_of_k/generate.py",
+      "detector": "denomark/evaluation/detect.py",
+      "candidates": 16,
+      "message_bits": 2
+    },
+    "pmark": {
+      "generator": "denomark/baselines/pmark/generate.py",
+      "detector": "denomark/baselines/semantic_detect.py",
+      "candidates": 16,
+      "channels": 2
+    },
+    "semstamp": {
+      "generator": "denomark/baselines/semstamp/generate.py",
+      "detector": "denomark/baselines/semantic_detect.py",
+      "lsh_bits": 2,
+      "accept_rate": 0.25
+    },
+    "scan_calibration": {
+      "unit_sizes": [12, 37],
+      "negative_crossfit_folds": 5,
+      "multiple_testing_correction": "bonferroni"
+    }
+  },
+  "trajectory_analysis": {
+    "llada": "denomark/experiments/trajectory/llada_reverse_hybrid_run.py",
+    "dream": "denomark/experiments/trajectory/dream_reverse_hybrid_run.py",
+    "llada_summarizer": "denomark/experiments/trajectory/llada_reverse_hybrid_summary.py",
+    "dream_summarizer": "denomark/experiments/trajectory/dream_reverse_hybrid_summary.py",
+    "prompts_per_backbone": 30
+  },
+  "downstream": {
+    "preparer": "denomark/experiments/downstream/prepare.py",
+    "runner": "denomark/experiments/downstream/run.py",
+    "aggregator": "denomark/experiments/downstream/aggregate.py",
+    "backbones": ["llada8b", "llada15"],
+    "benchmarks": ["mmlu", "hellaswag", "arc_challenge", "gsm8k"],
+    "evaluation_splits": "complete official evaluation splits",
+    "temperature": 0.1,
+    "metric": "accuracy"
+  },
+  "result_processing": {
+    "metric_collector": "denomark/evaluation/collect_metrics.py",
+    "figure_renderer": "denomark/evaluation/plot_figures.py",
+    "runtime_summarizer": "denomark/evaluation/summarize_runtime.py",
+    "figures": {
+      "main_semantic_tables": "collect_paper_metrics",
+      "open_source_semantic_attacks": "open-source-attacks",
+      "token_level_attacks": "token-level-attacks",
+      "four_parameter_sensitivity": "sensitivity",
+      "scan_range": "scan-range",
+      "maximum_length": "max-length",
+      "candidate_temperature_position": "temperature-position",
+      "continued_policy_trajectory": "trajectory"
+    }
+  },
+  "paper_experiment_coverage": {
+    "main_semantic_robustness": ["generation", "filtering", "sentence_gpt", "document_gpt", "detection"],
+    "open_source_semantic_attacks": ["parrot", "dipper", "detection", "plotting"],
+    "token_level_robustness": ["token_attacks", "detection", "plotting"],
+    "quality": ["perplexity", "gpt_judge"],
+    "sensitivity": ["candidate_temperature", "num_candidates", "rollout_count", "semantic_unit_size"],
+    "scan_range": ["fixed_25", "radius_2", "radius_4", "radius_8", "12_37", "10_40"],
+    "maximum_generation_length": [100, 150, 200, 250, 300],
+    "candidate_temperature_position": ["random", "low_confidence"],
+    "multi_position": [2, 4, 8],
+    "encoder_ablation": ["contrastive_ft", "untuned_e5"],
+    "backtranslation": ["sentence", "document"],
+    "document_length_attacks": ["compress_60_70", "expand_130_150"],
+    "nonuniform_local_length": ["alternating", "random_runs", "three_contiguous_bands"],
+    "semi_ar": ["block_best_of_k", "pmark", "semstamp"],
+    "tied_candidate_channel": [[8, 1], [16, 2], [24, 3], [32, 4]],
+    "downstream": ["mmlu", "hellaswag", "arc_challenge", "gsm8k"],
+    "runtime": ["generation_seconds", "generated_tokens"],
+    "trajectory": ["llada8b", "dream"],
+    "qualitative": ["llada8b", "llada15", "dream"]
+  }
+}

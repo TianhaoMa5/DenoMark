@@ -1,0 +1,69 @@
+[build-system]
+requires = ["setuptools>=69", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "denomark-dllm"
+version = "0.2.0"
+description = "DenoMark semantic watermarking for diffusion language models"
+readme = "README.md"
+requires-python = ">=3.10"
+license = "MIT"
+license-files = ["LICENSE"]
+dependencies = [
+  "numpy>=1.23,<3",
+  "torch>=2.0",
+  "tqdm>=4.66",
+  "transformers>=4.40,<6",
+]
+classifiers = [
+  "Development Status :: 3 - Alpha",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Topic :: Scientific/Engineering :: Artificial Intelligence",
+]
+
+[project.optional-dependencies]
+attacks = [
+  "bert-score>=0.3.13",
+  "nltk>=3.8",
+  "openai>=1.0",
+  "python-dotenv>=1.0",
+]
+eval = [
+  "scikit-learn>=1.2",
+  "sentence-transformers>=2.2",
+]
+dev = [
+  "pytest>=8",
+  "ruff>=0.9",
+]
+data = [
+  "datasets>=2.18",
+  "sentencepiece>=0.2",
+]
+plots = [
+  "matplotlib>=3.7",
+  "scipy>=1.10",
+]
+
+[project.scripts]
+denomark = "denomark.__main__:main"
+denomark-generate = "denomark.core.generate:main"
+
+[tool.setuptools.packages.find]
+include = ["denomark*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-ra"
+
+[tool.ruff]
+target-version = "py310"
+line-length = 100
+
+[tool.ruff.lint]
+# Keep CI focused on correctness while the research modules are incrementally
+# normalized. Style-only rules can be enabled once the public surface settles.
+select = ["E9", "F63", "F7", "F82"]

@@ -1,0 +1,65 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.coverage
+htmlcov/
+.venv/
+venv/
+
+# Editors and local credentials
+.env
+.env.*
+!.env.example
+.idea/
+.vscode/
+*.code-workspace
+.DS_Store
+
+# Build and release output
+build/
+dist/
+site/
+
+# Experiment output and scheduler state
+runs/
+runs_*/
+remote_results/
+pbs/
+pbs_jobs/
+logs/
+out/
+outputs/
+results/
+results_checklists/
+artifacts/
+analysis/
+.cache/
+.tmp/
+tmp*/
+tmp_*
+*.log
+*.out
+*.err
+*.o[0-9]*
+*.e[0-9]*
+
+# Large generated data, model weights, and archives
+data/prompts_multinews_500.jsonl
+data/*.jsonl.large
+external/
+models/
+*.npy
+*.npz
+*.pt
+*.pth
+*.bin
+*.safetensors
+*.ckpt
+*.zip
+*.tar
+*.tar.gz
+*.tgz
