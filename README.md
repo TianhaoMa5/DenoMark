@@ -1,4 +1,4 @@
-# DenMark
+# 🇩🇰 DenMark
 
 Semantic watermarking for diffusion language models. Code for the method,
 baselines, attacks, and experiments evaluated in the paper.
