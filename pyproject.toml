@@ -3,9 +3,9 @@ requires = ["setuptools>=69", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "denomark-dllm"
+name = "denmark-dllm"
 version = "0.2.0"
-description = "DenoMark semantic watermarking for diffusion language models"
+description = "DenMark semantic watermarking for diffusion language models"
 readme = "README.md"
 requires-python = ">=3.10"
 license = "MIT"
@@ -49,11 +49,11 @@ plots = [
 ]
 
 [project.scripts]
-denomark = "denomark.__main__:main"
-denomark-generate = "denomark.core.generate:main"
+denmark = "denmark.__main__:main"
+denmark-generate = "denmark.core.generate:main"
 
 [tool.setuptools.packages.find]
-include = ["denomark*"]
+include = ["denmark*"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

@@ -1,9 +1,9 @@
 # Reproducing every paper experiment
 
-This index maps every experiment reported in the DenoMark paper to a public
+This index maps every experiment reported in the DenMark paper to a public
 configuration and executable entry point. The machine-readable source of
-truth is `configs/paper_experiments.json`; DenoMark's method-only defaults are
-in `configs/denomark_paper.json`.
+truth is `configs/paper_experiments.json`; DenMark's method-only defaults are
+in `configs/denmark_paper.json`.
 
 ## 1. Environment and external implementations
 
@@ -18,7 +18,7 @@ python -m pip install -e ".[eval,attacks,data,plots]"
 The paper compares against official methods whose repositories and generator
 weights are not redistributed here. Clone them separately and pass their roots
 through command-line arguments. The only released model artifact is
-`DenoMark-Encoder`.
+`DenMark-Encoder`.
 
 - PatternMark: required by `--patternmark-repo`.
 - UMR: required by `--umr_root`, together with its generated bitmap.
@@ -37,17 +37,17 @@ Main robustness experiments cover the Cartesian product below.
 | --- | --- |
 | Backbones | LLaDA-8B, LLaDA1.5-8B, LLaDA2.0-mini, Dream-v0-Instruct-7B |
 | Datasets | Finance-QA, AlpacaFarm, LongForm-QA |
-| Methods | DenoMark, DLM-KGW, DGMark, PatternMark, UMR |
+| Methods | DenMark, DLM-KGW, DGMark, PatternMark, UMR |
 | Main semantic attacks | sentence rewrite, sentence compression, sentence expansion, document rewrite |
 | Metrics | ROC-interpolated TPR@0.5/1/5% FPR and rank AUC |
 
 Every method/backbone/dataset starts from up to 300 generated positives. Apply
-`denomark/data/filter.py` before any attack. Never filter attacked text
+`denmark/data/filter.py` before any attack. Never filter attacked text
 again. Every method for one backbone is evaluated against that backbone's same
 10,000 held-out C4 negatives.
 
 The configuration covers 19 paper experiment groups. Run
-`denomark/evaluation/audit_reproducibility.py` before launching a sweep; it
+`denmark/evaluation/audit_reproducibility.py` before launching a sweep; it
 verifies the complete paper axes, public entry points, method defaults, local
 imports, and release safety rules, including the requirement that no dataset
 payload is committed.
@@ -56,7 +56,7 @@ The repository does not redistribute benchmark rows. Construct prompt-only
 inputs from locally obtained WaterBench-style JSONL sources:
 
 ```bash
-python -m denomark.data.prepare_waterbench \
+python -m denmark.data.prepare_waterbench \
   --finance /path/to/finance_source.jsonl \
   --alpaca /path/to/alpaca_source.jsonl \
   --longform /path/to/longform_source.jsonl \
@@ -70,22 +70,22 @@ paper templates, and strips answers and source metadata from its outputs.
 ### Semantic encoder
 
 The exact paper checkpoint is distributed as the GitHub Release asset
-`DenoMark-Encoder.tar.gz`; see `docs/DENOMARK_ENCODER.md`. No training examples
+`DenMark-Encoder.tar.gz`; see `docs/DENMARK_ENCODER.md`. No training examples
 or paraphrase pairs are redistributed. To reconstruct the data from a local
 JSONL source corpus containing a `text` field, select 8,000 rows with:
 
 ```bash
-python -m denomark.encoder.prepare \
+python -m denmark.encoder.prepare \
   --input /path/to/source.jsonl --output-dir runs/encoder_pairs \
   --n 8000 --num-shards 8 --max-words 25 --seed 42
 ```
 
-Run `denomark.encoder.paraphrase` on every emitted shard with Pegasus
+Run `denmark.encoder.paraphrase` on every emitted shard with Pegasus
 beam size 10 and maximum length 60, then merge them with
-`denomark.encoder.merge`. The reported run retained 7,993 valid
+`denmark.encoder.merge`. The reported run retained 7,993 valid
 pairs after dropping empty, unchanged, and duplicate pairs. Train with
-`denomark.encoder.train` using the settings in
-`docs/DENOMARK_ENCODER.md`.
+`denmark.encoder.train` using the settings in
+`docs/DENMARK_ENCODER.md`.
 
 ## 3. Calibration and held-out negatives
 
@@ -94,7 +94,7 @@ script samples target lengths approximately uniformly over 150--300 and writes
 disjoint 30,000/10,000 splits with an overlap audit:
 
 ```bash
-python denomark/data/negatives.py \
+python denmark/data/negatives.py \
   --output-dir runs/c4_negative_pools
 ```
 
@@ -106,13 +106,13 @@ runs/c4_negative_pools/<backbone>/heldout_10000.jsonl
 runs/c4_negative_pools/audit.json
 ```
 
-Only DenoMark uses the 30,000 calibration rows. All five methods use the same
+Only DenMark uses the 30,000 calibration rows. All five methods use the same
 backbone-specific 10,000 rows for final ROC metrics. The two sets must have
 zero `source_id` overlap.
 
 ## 4. Generation and filtering
 
-### DenoMark
+### DenMark
 
 Use the command in the README for each backbone and dataset. Change only
 `--llada_model`, `--generator_family`, input, and output. The paper settings are
@@ -121,13 +121,13 @@ temperature 0.6, and a linear 5-to-1 rollout schedule averaging three
 rollouts. Dream uses its dedicated runner:
 
 ```bash
-python denomark/core/generate.py --generator_family dream --help
+python denmark/core/generate.py --generator_family dream --help
 ```
 
 ### DLM-KGW
 
 ```bash
-python denomark/baselines/dlm_kgw/generate.py \
+python denmark/baselines/dlm_kgw/generate.py \
   --waterbench_dir "$WATERBENCH" \
   --output_dir runs/kgw/<backbone> \
   --datasets finance_qa alpacafarm longform_qa \
@@ -148,7 +148,7 @@ not the LLaDA block loop. Its `block_size` argument does not control decoding.
 ### DGMark
 
 ```bash
-python denomark/baselines/dgmark/generate.py --help
+python denmark/baselines/dgmark/generate.py --help
 ```
 
 For LLaDA-family checkpoints use multinomial top-10 decoding, beam size 10,
@@ -163,7 +163,7 @@ short continuations in the paper setup.
 ### PatternMark
 
 ```bash
-python denomark/baselines/patternmark/generate.py \
+python denmark/baselines/patternmark/generate.py \
   --patternmark_repo "$PATTERNMARK_REPO" \
   --waterbench_dir "$WATERBENCH" \
   --output_dir runs/patternmark/<backbone> \
@@ -181,7 +181,7 @@ It uses two colors, length-four patterns `0101` and `1010`, and delta 4.
 ### UMR
 
 ```bash
-python denomark/baselines/umr/generate.py --help
+python denmark/baselines/umr/generate.py --help
 ```
 
 Use message `1001`, ratio 0.5, key 42, temperature 0.5, and low-confidence
@@ -199,7 +199,7 @@ Run this on every raw positive file and retain the resulting JSONL as the
 immutable attack input:
 
 ```bash
-python denomark/data/filter.py \
+python denmark/data/filter.py \
   --input runs/raw.jsonl \
   --output runs/filtered.jsonl \
   --audit runs/filtered.audit.json \
@@ -218,7 +218,7 @@ CLI arguments or written to output files.
 Sentence-level rewrite, 60--70% compression, and expansion:
 
 ```bash
-python denomark/attacks/gpt_sentence_level.py --help
+python denmark/attacks/gpt_sentence_level.py --help
 ```
 
 Use `openai/gpt-4o-mini`, temperature 0.7, and the three attack names recorded
@@ -228,7 +228,7 @@ cached by attack name, model, and sentence hash.
 Document-level rewrite, compression, and expansion:
 
 ```bash
-python denomark/attacks/gpt_document_level.py --help
+python denmark/attacks/gpt_document_level.py --help
 ```
 
 The main table uses document rewrite in addition to the three sentence-level
@@ -239,11 +239,11 @@ document-level table.
 
 | Experiment | Entry point | Sweep |
 | --- | --- | --- |
-| Parrot | `denomark/attacks/parrot.py` | candidate prefix 1, 4, 7, 10 |
-| DIPPER | `denomark/attacks/dipper.py` | lexical diversity 20, 40, 60, 80; order 0 |
-| Back-translation | `denomark/attacks/backtranslation.py` | sentence and document; English-Chinese-English |
-| Alternating/local runs | `denomark/attacks/mixed_length.py` | alternating and random compress/expand runs |
-| Variable local compression | `denomark/attacks/variable_compression.py` | contiguous 50--60, 60--70, 70--80% bands |
+| Parrot | `denmark/attacks/parrot.py` | candidate prefix 1, 4, 7, 10 |
+| DIPPER | `denmark/attacks/dipper.py` | lexical diversity 20, 40, 60, 80; order 0 |
+| Back-translation | `denmark/attacks/backtranslation.py` | sentence and document; English-Chinese-English |
+| Alternating/local runs | `denmark/attacks/mixed_length.py` | alternating and random compress/expand runs |
+| Variable local compression | `denmark/attacks/variable_compression.py` | contiguous 50--60, 60--70, 70--80% bands |
 
 Parrot and DIPPER figures use Finance and Alpaca on LLaDA-8B and Dream.
 Back-translation uses Alpaca and LongForm on the same two backbones. The
@@ -255,7 +255,7 @@ The paper uses only deletion, context-aware substitution, and adjacent word
 swapping at ratios 0.1, 0.2, 0.3, 0.4, and 0.5:
 
 ```bash
-python -m denomark.attacks.token_level \
+python -m denmark.attacks.token_level \
   --input runs/filtered.jsonl \
   --output runs/token_attacks.jsonl \
   --attacks deletion context_aware_substitution adjacent_swap \
@@ -268,10 +268,10 @@ for LLaDA-8B and Dream.
 
 ## 8. Detection
 
-### DenoMark Method A
+### DenMark Method A
 
 ```bash
-python denomark/evaluation/detect.py \
+python denmark/evaluation/detect.py \
   --positive_jsonl runs/positive_or_attack.jsonl \
   --calibration_jsonl runs/c4_negative_pools/<backbone>/calibration_30000.jsonl \
   --negative_jsonl runs/c4_negative_pools/<backbone>/heldout_10000.jsonl \
@@ -291,26 +291,26 @@ negative log corrected p-value. Calibration and ROC negatives are disjoint.
 
 | Method | Entry point | Paper ranking score |
 | --- | --- | --- |
-| DLM-KGW | `denomark/baselines/dlm_kgw/detect.py` | green-token z-score |
-| DGMark | `denomark/baselines/dgmark/detect.py` | mean squared z over all windows of size 8 |
-| PatternMark | `denomark/baselines/patternmark/detect.py` | negative official pattern-count p-value |
-| UMR | `denomark/baselines/umr/detect.py` | official z-score on first 300 retokenized tokens |
+| DLM-KGW | `denmark/baselines/dlm_kgw/detect.py` | green-token z-score |
+| DGMark | `denmark/baselines/dgmark/detect.py` | mean squared z over all windows of size 8 |
+| PatternMark | `denmark/baselines/patternmark/detect.py` | negative official pattern-count p-value |
+| UMR | `denmark/baselines/umr/detect.py` | official z-score on first 300 retokenized tokens |
 
 All attacked files must be re-tokenized. Use each backbone's held-out 10k pool
 and the `roc_*` or `paper_metrics` fields emitted by the evaluators.
-`denomark.baselines.dlm_kgw.detect` applies no positive-side length filter.
+`denmark.baselines.dlm_kgw.detect` applies no positive-side length filter.
 Use this same entry point for original and attacked text.
 
 Collect heterogeneous detector outputs into one auditable CSV using a JSONL
 manifest:
 
 ```json
-{"base":"llada8b","dataset":"finance_qa","method":"denomark","condition":"rewrite","result_path":"detection/ours_rewrite.json"}
+{"base":"llada8b","dataset":"finance_qa","method":"denmark","condition":"rewrite","result_path":"detection/ours_rewrite.json"}
 {"base":"llada8b","dataset":"finance_qa","method":"dlm_kgw","condition":"rewrite","result_path":"detection/kgw_rewrite.json"}
 ```
 
 ```bash
-python denomark/evaluation/collect_metrics.py \
+python denmark/evaluation/collect_metrics.py \
   --manifest runs/result_manifest.jsonl \
   --output runs/paper_metrics.csv
 ```
@@ -325,7 +325,7 @@ manifest row. Semi-AR examples use
 Completion-only Qwen2.5-32B PPL:
 
 ```bash
-python -m denomark.evaluation.ppl --help
+python -m denmark.evaluation.ppl --help
 ```
 
 Join outputs to same-backbone, same-dataset clean references and report
@@ -333,25 +333,25 @@ Join outputs to same-backbone, same-dataset clean references and report
 PPL. Run the four-axis GPT judge with:
 
 ```bash
-python denomark/evaluation/judge.py --help
+python denmark/evaluation/judge.py --help
 ```
 
 The judge reports style, consistency, accuracy, and ethics using
 GPT-4o-mini. Keep raw JSON responses and cache records.
 
 After scoring method and clean files, compute the exact quality-table delta
-with a manifest and `denomark/evaluation/compare_ppl.py`. Each manifest row names
+with a manifest and `denmark/evaluation/compare_ppl.py`. Each manifest row names
 the method and clean evaluator JSON files plus their keys under `results`:
 
 ```bash
-python denomark/evaluation/compare_ppl.py \
+python denmark/evaluation/compare_ppl.py \
   --manifest runs/ppl_manifest.jsonl \
   --output runs/ppl_comparison.csv
 ```
 
 ## 10. Ablations and diagnostics
 
-All generation ablations use the DenoMark generator and vary only the named
+All generation ablations use the DenMark generator and vary only the named
 flag. Values are in `configs/paper_experiments.json`.
 
 | Paper experiment | Vary |
@@ -379,27 +379,27 @@ generation unit size changed.
 Trajectory/continued-policy analysis:
 
 ```text
-denomark/experiments/trajectory/llada_cumulative_run.py
-denomark/experiments/trajectory/llada_reverse_hybrid_run.py
-denomark/experiments/trajectory/dream_reverse_hybrid_run.py
-denomark/experiments/trajectory/llada_cumulative_summary.py
-denomark/experiments/trajectory/llada_reverse_hybrid_summary.py
-denomark/experiments/trajectory/dream_reverse_hybrid_summary.py
+denmark/experiments/trajectory/llada_cumulative_run.py
+denmark/experiments/trajectory/llada_reverse_hybrid_run.py
+denmark/experiments/trajectory/dream_reverse_hybrid_run.py
+denmark/experiments/trajectory/llada_cumulative_summary.py
+denmark/experiments/trajectory/llada_reverse_hybrid_summary.py
+denmark/experiments/trajectory/dream_reverse_hybrid_summary.py
 ```
 
 The paper uses 30 prompts per backbone for the reverse-hybrid trajectory plot.
 
 ## 11. Semi-autoregressive baselines
 
-The appendix compares DenoMark with Block Best-of-K, PMark, and SemStamp
+The appendix compares DenMark with Block Best-of-K, PMark, and SemStamp
 semi-autoregressive adaptations. Their public implementations are grouped in
-`denomark/baselines/`.
+`denmark/baselines/`.
 
 ```text
-denomark/baselines/block_best_of_k/generate.py
-denomark/baselines/pmark/generate.py
-denomark/baselines/semstamp/generate.py
-denomark/baselines/semantic_detect.py
+denmark/baselines/block_best_of_k/generate.py
+denmark/baselines/pmark/generate.py
+denmark/baselines/semstamp/generate.py
+denmark/baselines/semantic_detect.py
 ```
 
 All three use 25-token units, random position selection, two semantic
@@ -409,7 +409,7 @@ the default released hash key. Their scanned semantic scores are calibrated
 with grouped five-fold cross-fitting on the held-out negative pool, so each
 negative is scored using calibration rows from the other folds.
 
-Block Best-of-K is detected with the DenoMark semantic detector using
+Block Best-of-K is detected with the DenMark semantic detector using
 `--num_message_bits 2`; PMark and SemStamp use their method-native scores via
 `evaluate_pmark_semstamp_calibrated_scan.py`. All reported Semi-AR TPR columns
 use the evaluator's `roc_tpr_at_0_5pct`, `roc_tpr_at_1pct`, and
@@ -422,10 +422,10 @@ The downstream table evaluates MMLU, HellaSwag, ARC-Challenge, and GSM8K on
 LLaDA-8B and LLaDA1.5-8B:
 
 ```bash
-python denomark/experiments/downstream/prepare.py \
+python denmark/experiments/downstream/prepare.py \
   --output runs/downstream/official_manifest.json
-python denomark/experiments/downstream/run.py --help
-python denomark/experiments/downstream/aggregate.py --help
+python denmark/experiments/downstream/run.py --help
+python denmark/experiments/downstream/aggregate.py --help
 ```
 
 The preparation command uses the complete official evaluation splits by
@@ -436,18 +436,18 @@ before averaging by method.
 
 ## 13. Paper figures
 
-`denomark/evaluation/plot_figures.py` renders every result-driven figure without
+`denmark/evaluation/plot_figures.py` renders every result-driven figure without
 repository-specific result paths. Each subcommand accepts tidy CSV and writes
 both vector PDF and a 300-dpi PNG preview:
 
 ```bash
-python denomark/evaluation/plot_figures.py sensitivity --input sensitivity.csv --output sensitivity.pdf
-python denomark/evaluation/plot_figures.py scan-range --input scan.csv --output scan.pdf
-python denomark/evaluation/plot_figures.py max-length --input max_length.csv --output max_length.pdf
-python denomark/evaluation/plot_figures.py temperature-position --input temperature_position.csv --output temperature_position.pdf
-python denomark/evaluation/plot_figures.py open-source-attacks --input open_source.csv --output open_source.pdf
-python denomark/evaluation/plot_figures.py token-level-attacks --input token_attacks.csv --output token_attacks.pdf
-python denomark/evaluation/plot_figures.py trajectory --input trajectory.csv --output trajectory.pdf
+python denmark/evaluation/plot_figures.py sensitivity --input sensitivity.csv --output sensitivity.pdf
+python denmark/evaluation/plot_figures.py scan-range --input scan.csv --output scan.pdf
+python denmark/evaluation/plot_figures.py max-length --input max_length.csv --output max_length.pdf
+python denmark/evaluation/plot_figures.py temperature-position --input temperature_position.csv --output temperature_position.pdf
+python denmark/evaluation/plot_figures.py open-source-attacks --input open_source.csv --output open_source.pdf
+python denmark/evaluation/plot_figures.py token-level-attacks --input token_attacks.csv --output token_attacks.pdf
+python denmark/evaluation/plot_figures.py trajectory --input trajectory.csv --output trajectory.pdf
 ```
 
 The tidy-CSV schemas are:
@@ -472,11 +472,11 @@ and a deterministic 2,000-resample 95% bootstrap interval.
 Before publishing a result or source bundle:
 
 ```bash
-python -m compileall -q denomark scripts tests
+python -m compileall -q denmark tests
 python -m pytest
-ruff check denomark scripts tests
-python denomark/evaluation/audit_reproducibility.py
-python denomark/evaluation/build_release.py --output /tmp/denomark-release
+ruff check denmark tests
+python denmark/evaluation/audit_reproducibility.py
+python denmark/evaluation/build_release.py --output /tmp/denmark-release
 ```
 
 The release builder is allow-listed, rejects credentials, personal/cluster

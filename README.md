@@ -1,49 +1,51 @@
-# DenoMark
+# DenMark
 
-Semantic watermarking for diffusion language models. This repository contains
-the method, baselines, and experiments from the paper, without bundled datasets.
+Semantic watermarking for diffusion language models. Code for the method,
+baselines, attacks, and experiments evaluated in the paper.
 
-## Install
+Supported backbones: **LLaDA-8B, LLaDA1.5-8B, LLaDA2.0-mini, and Dream**.
+
+## Installation
+
+Python 3.10+ is required. Generation requires suitable GPU resources.
 
 ```bash
+git clone https://github.com/TianhaoMa5/DenMark.git
+cd DenMark
 python -m pip install -e ".[eval,attacks,data,plots]"
-python -m denomark --help
 ```
 
-Python 3.10+ is required. Generator checkpoints and external baseline repositories
-are supplied through command-line paths; they are not bundled here.
+## Encoder and Data
 
-## Encoder
-
-Download **DenoMark-Encoder**, the paper's fine-tuned E5-base-v2 checkpoint:
+Download the paper's fine-tuned **DenMark-Encoder**:
 
 ```bash
-curl -L -o DenoMark-Encoder.tar.gz \
-  https://github.com/TianhaoMa5/DenoMark/releases/download/v0.2.0/DenoMark-Encoder.tar.gz
-tar -xzf DenoMark-Encoder.tar.gz
+curl -fL -o DenMark-Encoder.tar.gz \
+  https://github.com/TianhaoMa5/DenMark/releases/download/v0.2.0/DenMark-Encoder.tar.gz
+tar -xzf DenMark-Encoder.tar.gz
 ```
 
-The archive includes the weights, tokenizer, model card, and checksums.
-[Encoder construction and training](docs/DENOMARK_ENCODER.md) describes how to
-construct paraphrase pairs and train it. No training examples are distributed.
-
-## Generate And Detect
-
-First construct prompt inputs from locally obtained upstream data:
+Datasets and backbone weights are not bundled. Prepare prompt-only inputs from
+locally obtained upstream datasets:
 
 ```bash
-python -m denomark data prompts \
+python -m denmark data prompts \
   --finance /path/to/finance.jsonl --alpaca /path/to/alpaca.jsonl \
   --longform /path/to/longform.jsonl --output-dir runs/prompts --limit 500
 ```
 
-Generate watermarked text with a LLaDA-family checkpoint:
+See [data construction](docs/PAPER_REPRODUCTION.md#2-paper-matrix) and
+[encoder training](docs/DENMARK_ENCODER.md) for the full recipes.
+
+## Generate
+
+Example using LLaDA-8B and the paper's DenMark settings:
 
 ```bash
-python -m denomark generate \
+python -m denmark generate \
   --prompts_jsonl runs/prompts/finance_qa.jsonl \
   --llada_model GSAI-ML/LLaDA-8B-Instruct \
-  --encoder_model /path/to/DenoMark-Encoder \
+  --encoder_model /path/to/DenMark-Encoder \
   --output runs/watermarked.jsonl --retokenize_prompts \
   --gen_length 300 --block_size 25 --cand_block_size 1 \
   --num_candidates 16 --num_message_bits 2 --channels_per_step 2 \
@@ -54,82 +56,38 @@ python -m denomark generate \
   --direction_seed 42 --message_seed 0 --generator_family llada
 ```
 
-Use `--generator_family llada2` for LLaDA2.0-mini, or `dream` for Dream:
-`python -m denomark generate --generator_family dream --help`.
+LLaDA-8B and LLaDA1.5 use `llada`; LLaDA2.0-mini uses `llada2`.
+For Dream options: `python -m denmark generate --generator_family dream --help`.
 
-```bash
-python -m denomark data filter --help
-python -m denomark data negatives --help
-python -m denomark detect --help
-```
+## Reproduce the Paper
 
-The paper detector uses per-size empirical calibration plus Bonferroni over
-unit sizes 12--37. Calibration and ROC evaluation pools are disjoint. See the
-[reproduction guide](docs/PAPER_REPRODUCTION.md) for complete filtering,
-negative-pool, and detection commands.
+The [reproduction guide](docs/PAPER_REPRODUCTION.md) provides generation,
+filtering, calibration, detection, quality evaluation, and figure commands.
+The [experiment configuration](configs/paper_experiments.json) lists the settings.
 
-## Baselines
+- **Baselines:** Clean, DLM-KGW, DGMark, PatternMark, UMR; Block Best-of-K,
+  PMark-style and SemStamp-style for the blockwise comparison.
+- **Attacks:** sentence/document GPT attacks, nonuniform length changes,
+  Parrot, DIPPER, back-translation, and token-level perturbations.
+- **Experiments:** detection, PPL and GPT judge, ablations, rollout diagnostics,
+  and downstream tasks.
 
-Clean only generates unwatermarked text; it has no watermark detector.
-Other methods have generation and detection entry points:
+Filter positives before attack; detect attacked text without length refiltering
+or reusing original token IDs. DenMark uses per-size empirical calibration and
+Bonferroni correction over unit sizes 12--37, with disjoint calibration and ROC
+negative pools. See the [evaluation protocol](docs/REPRODUCIBILITY.md).
 
-| Method | Directory | Command |
-| --- | --- | --- |
-| Clean | `baselines/clean` | `baseline clean generate` (select Dream with `--generator_family dream`) |
-| DLM-KGW | `baselines/dlm_kgw` | `baseline dlm_kgw generate` / `detect` |
-| DGMark | `baselines/dgmark` | `baseline dgmark generate` / `detect` |
-| PatternMark | `baselines/patternmark` | `baseline patternmark generate` / `detect` |
-| UMR | `baselines/umr` | `baseline umr generate` / `detect` |
-| Block Best-of-K | `baselines/block_best_of_k` | `baseline block_best_of_k generate` / `detect` |
-| PMark-style | `baselines/pmark` | `baseline pmark generate` |
-| SemStamp-style | `baselines/semstamp` | `baseline semstamp generate` |
-
-Commands are prefixed with `python -m denomark`; append `--help` for options.
-PMark-style and SemStamp-style share `baseline semantic-detect`.
-
-## Attacks
-
-| Entry point | Purpose |
-| --- | --- |
-| `attacks/gpt_sentence_level.py` | GPT rewriting, compression, and expansion, one sentence per request |
-| `attacks/gpt_document_level.py` | GPT rewriting, compression, and expansion, one document per request |
-| `attacks/parrot.py` | Parrot with 1, 4, 7, or 10 candidates and bigram selection |
-
-Run these with `python -m denomark attack sentence`, `attack document`, or
-`attack parrot`, respectively. Append `--help` for arguments.
-Pegasus is used only to construct encoder training pairs, not as an attack.
-
-## Layout
-
-```text
-denomark/
-  core/          DenoMark generation, backbone adapters, scoring, calibration
-  baselines/     Clean and the paper baselines
-  attacks/       GPT, Parrot, DIPPER, translation, token-level attacks
-  data/          Data construction and filtering code only
-  encoder/       Encoder data construction and training
-  evaluation/    Detection metrics, PPL, judge, plots
-  experiments/   Paper downstream, trajectory, and block-candidate experiments
-```
-
-`core` has five implementation files: `generate.py` (unified generation entry),
-`model.py` (LLaDA-family and Dream model adapters),
-`selectors.py` (candidate selection), `scoring.py` (semantic scores), and
-`calibration.py` (scan calibration). It contains no training or plotting code.
-
-All paper experiment commands are in [the reproduction guide](docs/PAPER_REPRODUCTION.md),
-with a machine-readable index in [configs/paper_experiments.json](configs/paper_experiments.json).
-
-## Tests
-
-`tests/` contains synthetic regression checks, not datasets or model weights.
+## Checks
 
 ```bash
 python -m pip install -e ".[dev]"
 python -m pytest -q
-python -m denomark.evaluation.audit_reproducibility
+python -m denmark.evaluation.audit_reproducibility
 ```
+
+Tests use synthetic inputs without downloading model weights or calling APIs.
 
 ## License
 
-MIT. See [LICENSE](LICENSE).
+[MIT](LICENSE). External models, datasets, and baseline implementations retain
+their respective licenses.

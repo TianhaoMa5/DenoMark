@@ -1,0 +1,1 @@
+"""DenMark paper reproduction components."""

@@ -1,8 +1,7 @@
 # Reproducibility protocol
 
-This document records the paper-facing protocol. It is intentionally separate
-from historical experiment scripts, which may preserve older settings for
-auditability.
+This document defines the data preparation, detection, and quality-evaluation
+protocol used to reproduce the paper.
 
 ## Positive samples
 
@@ -23,7 +22,7 @@ For each backbone, prepare 40,000 unique C4 RealNewsLike passages using that
 backbone's tokenizer. Token lengths should be approximately uniform over the
 integer range 150 through 300.
 
-- 30,000 passages form DenoMark's calibration pool.
+- 30,000 passages form DenMark's calibration pool.
 - 10,000 disjoint passages form the held-out empirical ROC-negative pool.
 - The 10,000 held-out negatives are shared by all methods for that backbone.
 - Calibration and held-out source IDs must have zero overlap.
@@ -33,7 +32,7 @@ to choose or evaluate a point on the final ROC curve.
 
 ## Detection metrics
 
-Use the detector ranking statistic recorded for each method. For DenoMark this
+Use the detector ranking statistic recorded for each method. For DenMark this
 is `-log(p_scan)`. Report rank AUC with half credit for ties and linearly
 interpolated TPR at the requested exact false-positive rates.
 
@@ -71,4 +70,3 @@ Every released result should include:
 - calibration and held-out pool sizes and source-ID overlap count;
 - attack model, prompt version, temperature, and cache key definition;
 - code commit and package versions.
-

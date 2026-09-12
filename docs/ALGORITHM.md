@@ -1,4 +1,4 @@
-# DenoMark algorithm
+# DenMark algorithm
 
 ## Notation
 
@@ -12,7 +12,7 @@
   `b`, channel `j`.
 
 The complete paper configuration is machine-readable in
-`configs/denomark_paper.json`.
+`configs/denmark_paper.json`.
 
 ## Generation
 

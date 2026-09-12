@@ -2,7 +2,7 @@
   "schema_version": 1,
   "datasets": ["finance_qa", "alpacafarm", "longform_qa"],
   "data_construction": {
-    "script": "denomark/data/prepare_waterbench.py",
+    "script": "denmark/data/prepare_waterbench.py",
     "rows_per_dataset": 500,
     "selection": "first rows in source order unless a seeded random subset is requested",
     "output_fields": ["prompt", "raw_prompt", "input", "context"],
@@ -48,14 +48,14 @@
     "auc_method": "rank AUC with half credit for ties"
   },
   "methods": {
-    "denomark": {
-      "config": "configs/denomark_paper.json",
-      "generator": "denomark-generate",
-      "detector": "denomark/evaluation/detect.py"
+    "denmark": {
+      "config": "configs/denmark_paper.json",
+      "generator": "denmark-generate",
+      "detector": "denmark/evaluation/detect.py"
     },
     "dlm_kgw": {
-      "generator": "denomark/baselines/dlm_kgw/generate.py",
-      "detector": "denomark/baselines/dlm_kgw/detect.py",
+      "generator": "denmark/baselines/dlm_kgw/generate.py",
+      "detector": "denmark/baselines/dlm_kgw/detect.py",
       "delta": {
         "llada8b": 4.0,
         "llada15": 4.0,
@@ -70,8 +70,8 @@
       "score": "z_score"
     },
     "dgmark": {
-      "generator": "denomark/baselines/dgmark/generate.py",
-      "detector": "denomark/baselines/dgmark/detect.py",
+      "generator": "denmark/baselines/dgmark/generate.py",
+      "detector": "denmark/baselines/dgmark/detect.py",
       "window_size": 8,
       "score": "mean squared sliding-window z-score",
       "llada": {
@@ -90,8 +90,8 @@
       }
     },
     "patternmark": {
-      "generator": "denomark/baselines/patternmark/generate.py",
-      "detector": "denomark/baselines/patternmark/detect.py",
+      "generator": "denmark/baselines/patternmark/generate.py",
+      "detector": "denmark/baselines/patternmark/detect.py",
       "delta": 4.0,
       "colors": 2,
       "pattern_length": 4,
@@ -99,8 +99,8 @@
       "score": "negative official p_value"
     },
     "umr": {
-      "generator": "denomark/baselines/umr/generate.py",
-      "detector": "denomark/baselines/umr/detect.py",
+      "generator": "denmark/baselines/umr/generate.py",
+      "detector": "denmark/baselines/umr/detect.py",
       "message": "1001",
       "ratio": 0.5,
       "key": 42,
@@ -117,32 +117,32 @@
   },
   "semantic_attacks": {
     "sentence_gpt": {
-      "script": "denomark/attacks/gpt_sentence_level.py",
+      "script": "denmark/attacks/gpt_sentence_level.py",
       "model": "openai/gpt-4o-mini",
       "temperature": 0.7,
       "attacks": ["rewrite", "compress_60_70", "expand"]
     },
     "document_gpt": {
-      "script": "denomark/attacks/gpt_document_level.py",
+      "script": "denmark/attacks/gpt_document_level.py",
       "model": "openai/gpt-4o-mini",
       "temperature": 0.7,
       "attacks": ["rewrite", "compress_60_70", "expand_130_150"]
     },
     "parrot": {
-      "script": "denomark/attacks/parrot.py",
+      "script": "denmark/attacks/parrot.py",
       "candidate_prefix_sizes": [1, 4, 7, 10],
       "backbones": ["llada8b", "dream"],
       "datasets": ["finance_qa", "alpacafarm"]
     },
     "dipper": {
-      "script": "denomark/attacks/dipper.py",
+      "script": "denmark/attacks/dipper.py",
       "lexical_diversities": [20, 40, 60, 80],
       "order_diversity": 0,
       "backbones": ["llada8b", "dream"],
       "datasets": ["finance_qa", "alpacafarm"]
     },
     "backtranslation": {
-      "script": "denomark/attacks/backtranslation.py",
+      "script": "denmark/attacks/backtranslation.py",
       "model": "openai/gpt-4o-mini",
       "modes": ["sentence", "document"],
       "route": "English to Chinese to English",
@@ -150,8 +150,8 @@
       "datasets": ["alpacafarm", "longform_qa"]
     },
     "nonuniform_local_length": {
-      "mix_script": "denomark/attacks/mixed_length.py",
-      "compression_script": "denomark/attacks/variable_compression.py",
+      "mix_script": "denmark/attacks/mixed_length.py",
+      "compression_script": "denmark/attacks/variable_compression.py",
       "backbones": ["dream"],
       "datasets": ["finance_qa", "longform_qa"],
       "variants": [
@@ -162,7 +162,7 @@
     }
   },
   "token_attacks": {
-    "script": "python -m denomark.attacks.token_level",
+    "script": "python -m denmark.attacks.token_level",
     "attacks": ["deletion", "context_aware_substitution", "adjacent_swap"],
     "ratios": [0.1, 0.2, 0.3, 0.4, 0.5],
     "context_model": "bert-base-uncased",
@@ -171,21 +171,21 @@
     "figure_averaging": ["ratio", "backbone", "dataset"]
   },
   "quality": {
-    "perplexity_script": "python -m denomark.evaluation.ppl",
-    "perplexity_comparator": "denomark/evaluation/compare_ppl.py",
+    "perplexity_script": "python -m denmark.evaluation.ppl",
+    "perplexity_comparator": "denmark/evaluation/compare_ppl.py",
     "perplexity_statistic": "mean(log PPL_watermarked) - mean(log PPL_clean)",
-    "judge_script": "denomark/evaluation/judge.py",
+    "judge_script": "denmark/evaluation/judge.py",
     "judge_model": "openai/gpt-4o-mini",
     "judge_dimensions": ["style", "consistency", "accuracy", "ethics"]
   },
   "semantic_encoder_training": {
-    "trainer": "denomark/encoder/train.py",
-    "checkpoint_name": "DenoMark-Encoder",
-    "release_asset": "DenoMark-Encoder.tar.gz",
+    "trainer": "denmark/encoder/train.py",
+    "checkpoint_name": "DenMark-Encoder",
+    "release_asset": "DenMark-Encoder.tar.gz",
     "base_model": "intfloat/e5-base-v2",
-    "source_preparer": "denomark/encoder/prepare.py",
-    "paraphrase_generator": "denomark/encoder/paraphrase.py",
-    "pair_finalizer": "denomark/encoder/merge.py",
+    "source_preparer": "denmark/encoder/prepare.py",
+    "paraphrase_generator": "denmark/encoder/paraphrase.py",
+    "pair_finalizer": "denmark/encoder/merge.py",
     "source_rows": 8000,
     "reported_valid_pairs": 7993,
     "maximum_source_words": 25,
@@ -223,20 +223,20 @@
       "semantic_unit_size": 25
     },
     "block_best_of_k": {
-      "generator": "denomark/baselines/block_best_of_k/generate.py",
-      "detector": "denomark/evaluation/detect.py",
+      "generator": "denmark/baselines/block_best_of_k/generate.py",
+      "detector": "denmark/evaluation/detect.py",
       "candidates": 16,
       "message_bits": 2
     },
     "pmark": {
-      "generator": "denomark/baselines/pmark/generate.py",
-      "detector": "denomark/baselines/semantic_detect.py",
+      "generator": "denmark/baselines/pmark/generate.py",
+      "detector": "denmark/baselines/semantic_detect.py",
       "candidates": 16,
       "channels": 2
     },
     "semstamp": {
-      "generator": "denomark/baselines/semstamp/generate.py",
-      "detector": "denomark/baselines/semantic_detect.py",
+      "generator": "denmark/baselines/semstamp/generate.py",
+      "detector": "denmark/baselines/semantic_detect.py",
       "lsh_bits": 2,
       "accept_rate": 0.25
     },
@@ -247,16 +247,16 @@
     }
   },
   "trajectory_analysis": {
-    "llada": "denomark/experiments/trajectory/llada_reverse_hybrid_run.py",
-    "dream": "denomark/experiments/trajectory/dream_reverse_hybrid_run.py",
-    "llada_summarizer": "denomark/experiments/trajectory/llada_reverse_hybrid_summary.py",
-    "dream_summarizer": "denomark/experiments/trajectory/dream_reverse_hybrid_summary.py",
+    "llada": "denmark/experiments/trajectory/llada_reverse_hybrid_run.py",
+    "dream": "denmark/experiments/trajectory/dream_reverse_hybrid_run.py",
+    "llada_summarizer": "denmark/experiments/trajectory/llada_reverse_hybrid_summary.py",
+    "dream_summarizer": "denmark/experiments/trajectory/dream_reverse_hybrid_summary.py",
     "prompts_per_backbone": 30
   },
   "downstream": {
-    "preparer": "denomark/experiments/downstream/prepare.py",
-    "runner": "denomark/experiments/downstream/run.py",
-    "aggregator": "denomark/experiments/downstream/aggregate.py",
+    "preparer": "denmark/experiments/downstream/prepare.py",
+    "runner": "denmark/experiments/downstream/run.py",
+    "aggregator": "denmark/experiments/downstream/aggregate.py",
     "backbones": ["llada8b", "llada15"],
     "benchmarks": ["mmlu", "hellaswag", "arc_challenge", "gsm8k"],
     "evaluation_splits": "complete official evaluation splits",
@@ -264,9 +264,9 @@
     "metric": "accuracy"
   },
   "result_processing": {
-    "metric_collector": "denomark/evaluation/collect_metrics.py",
-    "figure_renderer": "denomark/evaluation/plot_figures.py",
-    "runtime_summarizer": "denomark/evaluation/summarize_runtime.py",
+    "metric_collector": "denmark/evaluation/collect_metrics.py",
+    "figure_renderer": "denmark/evaluation/plot_figures.py",
+    "runtime_summarizer": "denmark/evaluation/summarize_runtime.py",
     "figures": {
       "main_semantic_tables": "collect_paper_metrics",
       "open_source_semantic_attacks": "open-source-attacks",

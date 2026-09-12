@@ -1,7 +1,7 @@
 import pytest
 import torch
 
-from denomark.core.selectors import select_candidate, select_candidate_max_watermark
+from denmark.core.selectors import select_candidate, select_candidate_max_watermark
 
 
 def test_max_watermark_selects_highest_mean_signed_score():

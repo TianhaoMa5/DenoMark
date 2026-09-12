@@ -1,1 +1,0 @@
-"""DenoMark paper reproduction components."""
